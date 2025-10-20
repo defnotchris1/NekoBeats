@@ -21,15 +21,18 @@ namespace NekoBeats
             double barWidth = screenWidth / barCount;
             double maxHeight = screenHeight * 0.8;
 
-            // Detect beat (bass frequency spike)
-            bool hasBeat = frequencies.Length > 0 && frequencies[0] > 50;
-            double currentIntensity = frequencies[0] / 100.0;
+            // Get sensitivity from MainWindow
+            double sensitivity = MainWindow.AudioSensitivity;
+
+            // Detect beat (bass frequency spike) - sensitivity affects threshold
+            bool hasBeat = frequencies.Length > 0 && frequencies[0] > (50 / sensitivity);
+            double currentIntensity = (frequencies[0] / 100.0) * sensitivity;
 
             // Update beat intensity
             if (hasBeat && (DateTime.Now - lastBeatTime).TotalMilliseconds > 200)
             {
                 lastBeatTime = DateTime.Now;
-                beatIntensity = 1.0; // Reset to full intensity on beat
+                beatIntensity = 1.0 * sensitivity; // Sensitivity affects beat strength
             }
             else
             {
@@ -47,9 +50,9 @@ namespace NekoBeats
                 double pattern2 = (Math.Cos(DateTime.Now.Millisecond * 0.015 + i * 0.7) + 1) * 0.2;
                 double pattern3 = (Math.Sin(DateTime.Now.Millisecond * 0.025 + i * 1.2) + 1) * 0.25;
                 
-                // Combine patterns with beat intensity
+                // Combine patterns with beat intensity - APPLY SENSITIVITY HERE TOO
                 double combinedPattern = (pattern1 + pattern2 + pattern3) / 3;
-                double height = (combinedPattern * overallIntensity) * maxHeight;
+                double height = (combinedPattern * overallIntensity * sensitivity) * maxHeight;
 
                 // Ensure minimum height when audio is detected
                 if (overallIntensity > 0.1)
@@ -68,8 +71,8 @@ namespace NekoBeats
                 dc.DrawRectangle(brush, null, new Rect(x, y, barWidth - 1, height));
             }
 
-            // Debug info
-            var debugText = new FormattedText($"Beat: {beatIntensity:F2} | Audio: {currentIntensity:F2}",
+            // Debug info - show sensitivity too!
+            var debugText = new FormattedText($"Beat: {beatIntensity:F2} | Sens: {sensitivity:F1}",
                 System.Globalization.CultureInfo.CurrentCulture,
                 FlowDirection.LeftToRight,
                 new Typeface("Arial"), 14, Brushes.White);
