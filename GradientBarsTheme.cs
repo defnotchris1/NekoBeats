@@ -6,11 +6,12 @@ namespace NekoBeats
 {
     public class GradientBarsTheme : ITheme
     {
-        public string Name => "🌈 Gradient Bars - FIXED";
-        private Random random = new Random();
+        public string Name => "🌈 Gradient Bars";
 
         public void Render(DrawingContext dc, float[] frequencies, double[] fft)
         {
+            if (frequencies == null || frequencies.Length == 0) return;
+
             double screenWidth = 1920;
             double screenHeight = 1080;
             int barCount = 32;
@@ -19,30 +20,34 @@ namespace NekoBeats
 
             for (int i = 0; i < barCount; i++)
             {
-                // FORCE VISIBLE BARS - TEST WITH SYNTHETIC DATA
-                double syntheticValue = (Math.Sin(DateTime.Now.Millisecond * 0.01 + i * 0.3) + 1) * 50;
-                double realValue = frequencies != null && frequencies.Length > 0 ? frequencies[0] : 0;
-                double height = Math.Max(syntheticValue, realValue) / 100.0 * maxHeight;
+                // DISTRIBUTE FREQUENCIES ACROSS BARS PROPERLY
+                int freqIndex = (i * frequencies.Length) / barCount;
+                double frequencyValue = frequencies[Math.Min(freqIndex, frequencies.Length - 1)];
                 
-                // ENSURE MINIMUM HEIGHT
-                height = Math.Max(height, 20);
+                // Apply sensitivity and ensure minimum movement
+                double adjustedValue = frequencyValue * 0.5; // 50% sensitivity
+                double height = (adjustedValue / 100.0) * maxHeight;
+                
+                // Ensure bars are visible even with low audio
+                height = Math.Max(height, maxHeight * 0.05); // 5% minimum
                 
                 double x = i * barWidth;
                 double y = screenHeight - height;
 
-                var color1 = Colors.Red;
-                var color2 = Colors.Blue;
+                // Gradient based on intensity
+                var intensity = Math.Min(adjustedValue / 100.0, 1.0);
+                var color1 = Color.FromRgb((byte)(0xff * intensity), (byte)(0x6a * intensity), 0x00);
+                var color2 = Color.FromRgb(0x9c, 0x27, (byte)(0xb0 * intensity));
+
                 var brush = new LinearGradientBrush(color1, color2, 90);
-                
-                // DRAW THICK VISIBLE RECTANGLES
-                dc.DrawRectangle(brush, new Pen(Brushes.White, 2), new Rect(x, y, barWidth - 2, height));
+                dc.DrawRectangle(brush, null, new Rect(x, y, barWidth - 1, height));
             }
 
-            // BIG VISIBLE DEBUG TEXT
-            var debugText = new FormattedText($"BARS SHOULD BE VISIBLE! Freqs: {frequencies?.Length}",
+            // Debug info
+            var debugText = new FormattedText($"Freqs: {frequencies.Length} | First: {frequencies[0]:F1}",
                 System.Globalization.CultureInfo.CurrentCulture,
                 FlowDirection.LeftToRight,
-                new Typeface("Arial"), 24, Brushes.Red);
+                new Typeface("Arial"), 14, Brushes.White);
             dc.DrawText(debugText, new Point(20, 20));
         }
     }
