@@ -6,9 +6,22 @@ namespace NekoBeats
 {
     public partial class MainWindow : Window
     {
+        // Sensitivity property that themes can access
+        public static double AudioSensitivity { get; private set; } = 1.0;
+
         public MainWindow()
         {
             InitializeComponent();
+            // Set initial sensitivity text
+            SensitivityValueText.Text = $"Current: {(int)(AudioSensitivity * 100)}%";
+        }
+
+        // Sensitivity slider handler
+        private void SensitivitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            AudioSensitivity = e.NewValue;
+            SensitivityValueText.Text = $"Current: {(int)(e.NewValue * 100)}%";
+            StatusText.Text = $"🎵 Sensitivity: {(int)(e.NewValue * 100)}%";
         }
 
         private void GradientBars_Click(object sender, RoutedEventArgs e)
