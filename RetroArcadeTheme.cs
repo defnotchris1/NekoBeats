@@ -14,27 +14,39 @@ namespace NekoBeats
 
             double screenWidth = 1920;
             double screenHeight = 1080;
-            double barWidth = screenWidth / frequencies.Length;
+            int barCount = 32;
+            double barWidth = screenWidth / barCount;
             double maxHeight = screenHeight * 0.9;
 
             // Apply sensitivity reduction to 50%
             double sensitivity = 0.5;
 
-            for (int i = 0; i < frequencies.Length; i++)
+            for (int i = 0; i < barCount; i++)
             {
                 // Each bar moves differently based on its frequency band
-                double movementFactor = 1.0 + (Math.Sin(i * 0.3) * 0.3); // Unique movement pattern per bar
+                double movementFactor = 1.0 + (Math.Sin(i * 0.3) * 0.3);
                 
-                // Apply sensitivity and individual movement
-                double adjustedValue = frequencies[i] * sensitivity * movementFactor;
-                double height = (adjustedValue / 100.0) * maxHeight;
-                
-                // Ensure all bars move (minimum height when there's any audio)
-                if (adjustedValue > 5) // Threshold to keep bars visible
+                // Use FFT data if available, otherwise use frequencies with distribution
+                double adjustedValue;
+                if (fft != null && fft.Length > i)
                 {
-                    height = Math.Max(height, maxHeight * 0.1); // Minimum 10% height
+                    adjustedValue = fft[i] * sensitivity * movementFactor;
+                }
+                else
+                {
+                    // Distribute frequency data across bars
+                    int freqIndex = (i * frequencies.Length) / barCount;
+                    double baseValue = frequencies[Math.Min(freqIndex, frequencies.Length - 1)];
+                    adjustedValue = baseValue * sensitivity * movementFactor * (1.0 - (i * 0.02));
+                }
+                
+                // Ensure all bars move
+                if (adjustedValue > 3)
+                {
+                    adjustedValue = Math.Max(adjustedValue, 10);
                 }
 
+                double height = (adjustedValue / 100.0) * maxHeight;
                 double x = i * barWidth;
                 double y = screenHeight - height;
 
@@ -42,28 +54,28 @@ namespace NekoBeats
                 var intensity = Math.Min(adjustedValue / 100.0, 1.0);
                 var colors = new[]
                 {
-                    Color.FromRgb((byte)(255 * intensity), 0, 0), // Red
-                    Color.FromRgb(0, 0, (byte)(255 * intensity)), // Blue
-                    Color.FromRgb(0, (byte)(255 * intensity), 0), // Green
-                    Color.FromRgb((byte)(255 * intensity), (byte)(255 * intensity), 0), // Yellow
-                    Color.FromRgb((byte)(255 * intensity), 0, (byte)(255 * intensity)), // Magenta
-                    Color.FromRgb(0, (byte)(255 * intensity), (byte)(255 * intensity)), // Cyan
-                    Color.FromRgb((byte)(255 * intensity), (byte)(255 * intensity), (byte)(255 * intensity)) // White
+                    Color.FromRgb((byte)(255 * intensity), 0, 0),
+                    Color.FromRgb(0, 0, (byte)(255 * intensity)),
+                    Color.FromRgb(0, (byte)(255 * intensity), 0),
+                    Color.FromRgb((byte)(255 * intensity), (byte)(255 * intensity), 0),
+                    Color.FromRgb((byte)(255 * intensity), 0, (byte)(255 * intensity)),
+                    Color.FromRgb(0, (byte)(255 * intensity), (byte)(255 * intensity)),
+                    Color.FromRgb((byte)(255 * intensity), (byte)(255 * intensity), (byte)(255 * intensity))
                 };
                 var color = colors[i % colors.Length];
 
-                // Pixelated look with larger blocks for fullscreen
+                // Pixelated look with larger blocks
                 var brush = new SolidColorBrush(color);
                 var pen = new Pen(Brushes.Black, 1);
 
-                // Draw larger pixel blocks for fullscreen
+                // Draw larger pixel blocks
                 for (double blockY = y; blockY < screenHeight; blockY += 8)
                 {
                     dc.DrawRectangle(brush, pen, new Rect(x, blockY, barWidth - 2, 6));
                 }
 
-                // Draw retro scan lines across entire screen (intensity-based)
-                if (i % 4 == 0 && intensity > 0.3)
+                // Draw retro scan lines
+                if (i % 4 == 0 && intensity > 0.2)
                 {
                     var scanBrush = new SolidColorBrush(Color.FromArgb((byte)(100 * intensity), 255, 255, 255));
                     dc.DrawLine(new Pen(scanBrush, 1), 
@@ -71,7 +83,7 @@ namespace NekoBeats
                 }
             }
 
-            // Draw pulsing retro game border based on overall audio intensity
+            // Draw pulsing retro border
             double overallIntensity = 0;
             for (int i = 0; i < Math.Min(frequencies.Length, 10); i++)
             {
@@ -83,7 +95,7 @@ namespace NekoBeats
             var borderPen = new Pen(new SolidColorBrush(borderColor), 3 + (overallIntensity * 2));
             dc.DrawRectangle(null, borderPen, new Rect(10, 10, screenWidth - 20, screenHeight - 20));
 
-            // Draw retro "NEKO BEATS" title that pulses
+            // Draw pulsing title
             var pulse = (Math.Sin(DateTime.Now.Millisecond * 0.01) + 1) * 0.5;
             var titleBrush = new SolidColorBrush(Color.FromRgb((byte)(255 * pulse), (byte)(100 * pulse), 255));
             var titleText = new FormattedText("NEKO BEATS", 
